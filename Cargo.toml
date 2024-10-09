@@ -1,0 +1,16 @@
+[package]
+name = "frequenz-resampling"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "frequenz_resampling"
+crate-type = ["rlib"]
+
+[features]
+
+[dependencies]
+itertools = "0.13.0"
+num-traits = "0.2.19"
+chrono = "0.4.38"
+log = "0.4.22"
