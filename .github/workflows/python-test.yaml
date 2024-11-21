@@ -1,0 +1,209 @@
+name: Python Test
+
+on:
+  workflow_run:
+    workflows: [Python Build]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: ubuntu-latest
+            target: x86_64
+          - runner: ubuntu-latest
+            target: x86
+          - runner: ubuntu-latest
+            target: aarch64
+          - runner: ubuntu-latest
+            target: armv7
+        nox-session:
+          # To speed things up a bit we use the special ci_checks_max session
+          # that uses the same venv to run multiple linting sessions
+          - "ci_checks_max"
+          - "pytest_min"
+        python:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.platform.target }}-${{ matrix.python }}
+          path: dist
+      - name: Create nox venv
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: nox --install-only -e "$NOX_SESSION"
+      - name: Print pip freeze for nox venv (debug)
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: |
+          . ".nox/$NOX_SESSION/bin/activate"
+          pip freeze
+          deactivate
+      - name: Install wheels
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: |
+          . ".nox/$NOX_SESSION/bin/activate"
+          python -m pip install dist/*.whl
+          deactivate
+      - name: Run nox
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: nox -R -e "$NOX_SESSION"
+        timeout-minutes: 10
+
+  windows:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: windows-latest
+            target: x64
+          - runner: windows-latest
+            target: x86
+        nox-session:
+          # To speed things up a bit we use the special ci_checks_max session
+          # that uses the same venv to run multiple linting sessions
+          - "ci_checks_max"
+          - "pytest_min"
+        python:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: ${{ matrix.platform.target }}
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-windows-${{ matrix.platform.target }}-${{ matrix.python }}
+          path: dist
+      - name: Create nox venv
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: nox --install-only -e "$NOX_SESSION"
+      - name: Print pip freeze for nox venv (debug)
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: |
+          . ".nox/$NOX_SESSION/bin/activate"
+          pip freeze
+          deactivate
+      - name: Install wheels
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: |
+          . ".nox/$NOX_SESSION/bin/activate"
+          python -m pip install dist/*.whl
+          deactivate
+      - name: Run nox
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: nox -R -e "$NOX_SESSION"
+        timeout-minutes: 10
+
+  macos:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: macos-14
+            target: x86_64
+          - runner: macos-14
+            target: aarch64
+          - runner: macos-15
+            target: x86_64
+          - runner: macos-15
+            target: aarch64
+        nox-session:
+          # To speed things up a bit we use the special ci_checks_max session
+          # that uses the same venv to run multiple linting sessions
+          - "ci_checks_max"
+          - "pytest_min"
+        python:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform.runner }}-${{ matrix.platform.target }}-${{ matrix.python }}
+          path: dist
+      - name: Create nox venv
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: nox --install-only -e "$NOX_SESSION"
+      - name: Print pip freeze for nox venv (debug)
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: |
+          . ".nox/$NOX_SESSION/bin/activate"
+          pip freeze
+          deactivate
+      - name: Install wheels
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: |
+          . ".nox/$NOX_SESSION/bin/activate"
+          python -m pip install dist/*.whl
+          deactivate
+      - name: Run nox
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: nox -R -e "$NOX_SESSION"
+        timeout-minutes: 10
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist
+      - name: Create nox venv
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: nox --install-only -e "$NOX_SESSION"
+      - name: Print pip freeze for nox venv (debug)
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: |
+          . ".nox/$NOX_SESSION/bin/activate"
+          pip freeze
+          deactivate
+      - name: Install wheels
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: |
+          . ".nox/$NOX_SESSION/bin/activate"
+          python -m pip install dist/*.tar.gz
+          deactivate
+      - name: Run nox
+        env:
+          NOX_SESSION: ${{ matrix.nox-session }}
+        run: nox -R -e "$NOX_SESSION"
+        timeout-minutes: 10
